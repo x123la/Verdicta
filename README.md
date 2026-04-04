@@ -88,3 +88,12 @@ Grounding is enforced in three layers:
 ## Notes
 
 This environment does not currently expose `node`, `npm`, or `pnpm`, so dependency installation and runtime verification could not be executed here. The repository has been updated with the production-oriented structure, typed contracts, desktop shell, domain repositories, renderer surfaces, workflow scaffolding, and documentation needed to continue in a normal Node-enabled environment.
+
+## License
+
+Verdicta is proprietary software.
+
+- Source code in this repository is governed by [LICENSE](/C:/Users/Lucas Alonso/Documents/Repo/Verdicta/LICENSE).
+- Distributed commercial copies should be governed by [COMMERCIAL-EULA.md](/C:/Users/Lucas Alonso/Documents/Repo/Verdicta/COMMERCIAL-EULA.md).
+- Hosted or online service usage should be governed by [TERMS-OF-SERVICE.md](/C:/Users/Lucas Alonso/Documents/Repo/Verdicta/TERMS-OF-SERVICE.md).
+- Data handling disclosures should be governed by [PRIVACY-POLICY.md](/C:/Users/Lucas Alonso/Documents/Repo/Verdicta/PRIVACY-POLICY.md).
