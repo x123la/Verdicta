@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 220 18% 97%;
+  --foreground: 220 14% 14%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 16% 14%;
+  --border: 220 12% 84%;
+  --input: 220 14% 89%;
+  --ring: 214 28% 54%;
+  --primary: 220 18% 18%;
+  --primary-foreground: 210 18% 96%;
+  --muted: 210 18% 95%;
+  --muted-foreground: 218 10% 42%;
+  --accent: 210 16% 92%;
+  --accent-foreground: 220 18% 18%;
+}
+
+.dark {
+  --background: 218 15% 8%;
+  --foreground: 210 22% 94%;
+  --card: 220 13% 11%;
+  --card-foreground: 210 25% 94%;
+  --border: 220 10% 20%;
+  --input: 220 11% 17%;
+  --ring: 214 28% 62%;
+  --primary: 212 17% 90%;
+  --primary-foreground: 220 14% 8%;
+  --muted: 220 11% 14%;
+  --muted-foreground: 215 16% 66%;
+  --accent: 220 10% 16%;
+  --accent-foreground: 210 22% 94%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100vh;
+  }
+
+  body {
+    margin: 0;
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui;
+    color: hsl(var(--foreground));
+    background:
+      radial-gradient(circle at top left, rgba(148, 163, 184, 0.07), transparent 32%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.015), rgba(255, 255, 255, 0)),
+      hsl(var(--background));
+  }
+}
+
+@layer utilities {
+  .shadow-panel {
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+  }
+}

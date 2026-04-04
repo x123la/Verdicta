@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@verdicta/shared": ["packages/shared/src/index.ts"],
+      "@verdicta/db": ["packages/db/src/index.ts"],
+      "@verdicta/ai": ["packages/ai/src/index.ts"],
+      "@verdicta/ui": ["packages/ui/src/index.ts"],
+      "@verdicta/core": ["packages/core/src/index.ts"],
+      "@verdicta/legal": ["packages/legal/src/index.ts"],
+      "@verdicta/ingestion": ["packages/ingestion/src/index.ts"]
+    }
+  }
+}

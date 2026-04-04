@@ -1,0 +1,21 @@
+{
+  "name": "@verdicta/ingestion",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@verdicta/shared": "workspace:*",
+    "jszip": "^3.10.1",
+    "pdfjs-dist": "^4.8.69"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  }
+}

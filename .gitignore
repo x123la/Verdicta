@@ -1,0 +1,11 @@
+node_modules
+dist
+dist-electron
+release
+coverage
+.DS_Store
+*.log
+apps/desktop/.vite
+apps/desktop/dev-dist
+data
+tmp
