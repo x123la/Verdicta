@@ -171,7 +171,7 @@ pnpm build
 ```
 
 Electron Builder packages the desktop app for Windows, macOS, and Linux using
-[apps/desktop/package.json](/C:/Users/Lucas Alonso/Documents/Repo/Verdicta/apps/desktop/package.json).
+`apps/desktop/package.json`.
 
 ## Data and initialization
 
@@ -187,41 +187,29 @@ On first launch, the main process:
 To add a new AI provider:
 
 1. Create a provider class in
-   [packages/ai/src/providers](/C:/Users/Lucas Alonso/Documents/Repo/Verdicta/packages/ai/src/providers)
-   that implements `AiProvider` from
-   [packages/ai/src/types.ts](/C:/Users/Lucas Alonso/Documents/Repo/Verdicta/packages/ai/src/types.ts).
+   `packages/ai/src/providers` that implements `AiProvider` from
+   `packages/ai/src/types.ts`.
 2. Register it in
-   [packages/ai/src/registry.ts](/C:/Users/Lucas Alonso/Documents/Repo/Verdicta/packages/ai/src/registry.ts).
+   `packages/ai/src/registry.ts`.
 3. Persist provider configuration through
-   [packages/db/src/repositories/settings.ts](/C:/Users/Lucas Alonso/Documents/Repo/Verdicta/packages/db/src/repositories/settings.ts).
+   `packages/db/src/repositories/settings.ts`.
 4. Expose provider testing or workflow usage through
-   [apps/desktop/src/main/ipc.ts](/C:/Users/Lucas Alonso/Documents/Repo/Verdicta/apps/desktop/src/main/ipc.ts).
+   `apps/desktop/src/main/ipc.ts`.
 
 ## Additional documentation
 
 Supporting design and implementation notes are available in:
 
-- [architecture.md](/C:/Users/Lucas Alonso/Documents/Repo/Verdicta/docs/architecture.md)
-- [providers.md](/C:/Users/Lucas Alonso/Documents/Repo/Verdicta/docs/providers.md)
-- [retrieval.md](/C:/Users/Lucas Alonso/Documents/Repo/Verdicta/docs/retrieval.md)
-- [security.md](/C:/Users/Lucas Alonso/Documents/Repo/Verdicta/docs/security.md)
+- `docs/architecture.md`
+- `docs/providers.md`
+- `docs/retrieval.md`
+- `docs/security.md`
 
 ## Product and legal status
 
 Verdicta is proprietary software intended as a commercial product.
 
-- Source code in this repository is governed by
-  [LICENSE](/C:/Users/Lucas Alonso/Documents/Repo/Verdicta/LICENSE).
-- Distributed commercial copies should be governed by
-  [COMMERCIAL-EULA.md](/C:/Users/Lucas Alonso/Documents/Repo/Verdicta/COMMERCIAL-EULA.md).
-- Hosted or online service usage should be governed by
-  [TERMS-OF-SERVICE.md](/C:/Users/Lucas Alonso/Documents/Repo/Verdicta/TERMS-OF-SERVICE.md).
-- Data handling disclosures should be governed by
-  [PRIVACY-POLICY.md](/C:/Users/Lucas Alonso/Documents/Repo/Verdicta/PRIVACY-POLICY.md).
-
-## Current environment note
-
-This environment does not currently expose `node`, `npm`, or `pnpm`, so runtime
-verification could not be executed here. The repository documentation and legal
-pack were prepared in the current workspace, but application install and runtime
-checks should be completed in a normal Node-enabled environment.
+- Source code in this repository is governed by `LICENSE`.
+- Distributed commercial copies should be governed by `COMMERCIAL-EULA.md`.
+- Hosted or online service usage should be governed by `TERMS-OF-SERVICE.md`.
+- Data handling disclosures should be governed by `PRIVACY-POLICY.md`.
