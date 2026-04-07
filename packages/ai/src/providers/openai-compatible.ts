@@ -16,7 +16,7 @@ export class OpenAiCompatibleProvider implements AiProvider {
     private readonly apiKey?: string
   ) {}
 
-  private authHeaders() {
+  private authHeaders(): Record<string, string> {
     return this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {};
   }
 

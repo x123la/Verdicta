@@ -25,6 +25,7 @@ export type ExtractionStatus =
   | "ocr_required";
 
 export type ProviderKind =
+  | "local"
   | "openai-compatible"
   | "anthropic-compatible"
   | "ollama"

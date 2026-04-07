@@ -164,6 +164,27 @@ pnpm dev
 This starts the Vite renderer and launches Electron against the secure preload
 bridge.
 
+### Install a desktop launcher
+
+If you want Verdicta to appear in your desktop launcher like a normal Electron
+application, install the local launcher once:
+
+```bash
+pnpm desktop:install-launcher
+```
+
+This creates a `Verdicta` desktop entry in `~/.local/share/applications/` that
+points at the current repository checkout. When launched from your app menu or
+by double-clicking the launcher, it will:
+
+- install workspace dependencies on first run
+- rebuild the desktop app when repository code changes
+- show launch progress while it is installing, rebuilding, or starting
+- launch the latest local version from this checkout
+
+That means the launcher stays attached to your active working copy instead of a
+stale packaged build.
+
 ### Build and package
 
 ```bash

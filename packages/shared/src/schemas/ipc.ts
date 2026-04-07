@@ -24,6 +24,16 @@ import {
   supportReviewSchema,
   workflowRunSchema
 } from "./legal-workflows";
+import {
+  localDownloadQueueItemSchema,
+  installedLocalModelSchema,
+  localModelCatalogEntrySchema,
+  localRuntimeConfigSchema,
+  localRuntimeInstallStatusSchema,
+  localRuntimeStatusSchema,
+  localSystemProfileSchema,
+  localTelemetrySchema
+} from "./local-ai";
 
 const noteSchema = z.object({
   id: z.string(),
@@ -152,6 +162,64 @@ export const ipcSchemas = {
   "providers:test": {
     input: z.object({ providerName: z.string() }),
     output: providerHealthSchema
+  },
+  "local-models:catalog": {
+    input: z.object({
+      query: z.string().default(""),
+      limit: z.number().int().min(1).max(100).default(20)
+    }),
+    output: z.array(localModelCatalogEntrySchema)
+  },
+  "local-models:detail": {
+    input: z.object({
+      repoId: z.string()
+    }),
+    output: localModelCatalogEntrySchema
+  },
+  "local-models:installed": {
+    input: z.void(),
+    output: z.array(installedLocalModelSchema)
+  },
+  "local-models:install": {
+    input: z.object({
+      repoId: z.string(),
+      fileName: z.string().optional()
+    }),
+    output: installedLocalModelSchema
+  },
+  "local-models:remove": {
+    input: z.object({
+      modelId: z.string()
+    }),
+    output: z.object({ ok: z.boolean() })
+  },
+  "local-models:runtime": {
+    input: z.void(),
+    output: localRuntimeStatusSchema
+  },
+  "local-models:runtime-install": {
+    input: z.void(),
+    output: localRuntimeInstallStatusSchema
+  },
+  "local-models:runtime-install-start": {
+    input: z.void(),
+    output: localRuntimeInstallStatusSchema
+  },
+  "local-models:downloads": {
+    input: z.void(),
+    output: z.array(localDownloadQueueItemSchema)
+  },
+  "local-models:configure": {
+    input: localRuntimeConfigSchema.partial(),
+    output: localRuntimeStatusSchema
+  },
+  "local-models:system-profile": {
+    input: z.void(),
+    output: localSystemProfileSchema
+  },
+  "local-models:telemetry": {
+    input: z.void(),
+    output: localTelemetrySchema
   },
   "system:pick-files": {
     input: z.object({

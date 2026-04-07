@@ -35,6 +35,10 @@ export class ProviderRegistry {
     }
   }
 
+  registerProvider(providerName: string, provider: AiProvider) {
+    this.providers.set(providerName, provider);
+  }
+
   get(providerName: string): AiProvider {
     const provider = this.providers.get(providerName);
     if (!provider) {

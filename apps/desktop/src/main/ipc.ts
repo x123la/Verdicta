@@ -30,9 +30,11 @@ import {
 import { ingestFile } from "@verdicta/ingestion";
 import { ipcSchemas } from "@verdicta/shared";
 import { getAppPaths } from "./bootstrap";
+import { LocalAiService } from "./local-ai/local-ai-service";
+import { LocalRuntimeProvider } from "./local-ai/local-provider";
 
 const buildServices = () => {
-  const { dbPath, documentsDir } = getAppPaths();
+  const { userData, dbPath, documentsDir } = getAppPaths();
   const db = createDatabase(dbPath);
   const settingsRepository = new SettingsRepository(db);
   const workspaceRepository = new WorkspaceRepository(db);
@@ -41,10 +43,13 @@ const buildServices = () => {
   const draftsRepository = new DraftsRepository(db);
   const notesRepository = new NotesRepository(db);
   const providers = new ProviderRegistry();
+  const localAi = new LocalAiService(userData);
+  providers.registerProvider("local", new LocalRuntimeProvider(localAi));
 
   return {
     db,
     documentsDir,
+    localAi,
     settingsRepository,
     workspaceRepository,
     documentRepository,
@@ -89,11 +94,11 @@ export const registerIpcHandlers = (_window: BrowserWindow) => {
     "workspace:activity": ({ workspaceId }) => services.workspaceRepository.getActivity(workspaceId),
     "documents:import": async (input) => {
       const ingested = await Promise.all(
-        input.filePaths.map((filePath) => ingestFile(input.workspaceId, filePath, services.documentsDir))
+        input.filePaths.map((filePath: string) => ingestFile(input.workspaceId, filePath, services.documentsDir))
       );
 
       const records = await services.documentRepository.createMany(
-        ingested.map((doc) => ({
+        ingested.map((doc: Awaited<ReturnType<typeof ingestFile>>) => ({
           id: createId("doc"),
           workspaceId: input.workspaceId,
           title: doc.title,
@@ -248,7 +253,7 @@ export const registerIpcHandlers = (_window: BrowserWindow) => {
     "drafts:upsert": (input) => services.draftsService.upsert(input),
     "settings:get": () => services.settingsRepository.get(),
     "settings:update": async (input) => {
-      const providerConfigs = input.providerConfigs?.map((provider) => ({
+      const providerConfigs = input.providerConfigs?.map((provider: NonNullable<typeof input.providerConfigs>[number]) => ({
         ...provider,
         encryptedApiKey: encryptSecret(provider.encryptedApiKey)
       }));
@@ -258,6 +263,9 @@ export const registerIpcHandlers = (_window: BrowserWindow) => {
       });
     },
     "providers:test": async ({ providerName }) => {
+      if (providerName === "local") {
+        return services.providers.get("local").healthCheck();
+      }
       const settings = await services.settingsRepository.get();
       const provider = settings.providerConfigs.find((item) => item.providerName === providerName);
       if (!provider) {
@@ -270,6 +278,18 @@ export const registerIpcHandlers = (_window: BrowserWindow) => {
       });
       return services.providers.get(providerName).healthCheck();
     },
+    "local-models:catalog": async ({ query, limit }) => services.localAi.searchCatalog(query, limit),
+    "local-models:detail": async ({ repoId }) => services.localAi.getCatalogDetail(repoId),
+    "local-models:installed": async () => services.localAi.listInstalledModels(),
+    "local-models:install": ({ repoId, fileName }) => services.localAi.installModel(repoId, fileName),
+    "local-models:remove": ({ modelId }) => services.localAi.removeModel(modelId),
+    "local-models:runtime": async () => services.localAi.getRuntimeStatus(),
+    "local-models:runtime-install": async () => services.localAi.getRuntimeInstallStatus(),
+    "local-models:runtime-install-start": async () => services.localAi.installManagedRuntime(),
+    "local-models:downloads": async () => services.localAi.listDownloads(),
+    "local-models:configure": async (input) => services.localAi.configureRuntime(input),
+    "local-models:system-profile": async () => services.localAi.getSystemProfile(),
+    "local-models:telemetry": async () => services.localAi.getTelemetry(),
     "system:pick-files": async ({ filters }) => {
       const result = await dialog.showOpenDialog({
         properties: ["openFile", "multiSelections"],

@@ -16,8 +16,8 @@ export const workspaceSchema = z.object({
   ]),
   preferredCitationStyle: z.string().default("Bluebook"),
   preferredWritingMode: z.string().default("Professional"),
-  preferredProvider: z.string().default("ollama"),
-  preferredModel: z.string().default("llama3.1"),
+  preferredProvider: z.string().default("local"),
+  preferredModel: z.string().default("auto"),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional()
 });

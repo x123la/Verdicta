@@ -27,8 +27,8 @@ export const WorkspacesScreen = () => {
               defaultChatMode: "research",
               preferredCitationStyle: "Bluebook",
               preferredWritingMode: "Professional",
-              preferredProvider: "ollama",
-              preferredModel: "llama3.1"
+              preferredProvider: "local",
+              preferredModel: "auto"
             })
           }
           disabled={createWorkspace.isPending}

@@ -8,6 +8,7 @@ const sectionTitle = (pathname: string) => {
   if (pathname.startsWith("/library")) return "Local legal library";
   if (pathname.startsWith("/research")) return "Grounded legal research";
   if (pathname.startsWith("/drafts")) return "Drafting and verification";
+  if (pathname.startsWith("/local-ai")) return "Local AI runtime and model catalog";
   if (pathname.startsWith("/settings")) return "Provider and privacy settings";
   if (pathname.startsWith("/documents")) return "Document viewer";
   return "Home dashboard";

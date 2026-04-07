@@ -17,8 +17,8 @@ export const seedDemoData = async (dbPath?: string) => {
 
   await settingsRepo.upsert({
     theme: "dark",
-    defaultModelProvider: "ollama",
-    defaultModelName: "llama3.1",
+    defaultModelProvider: "local",
+    defaultModelName: "auto",
     citationStyle: "Bluebook",
     privacyMode: true,
     localOnly: false,
@@ -55,8 +55,8 @@ export const seedDemoData = async (dbPath?: string) => {
     defaultChatMode: "research",
     preferredCitationStyle: "Bluebook",
     preferredWritingMode: "Professional",
-    preferredProvider: "ollama",
-    preferredModel: "llama3.1"
+    preferredProvider: "local",
+    preferredModel: "auto"
   });
 
   await documentRepo.createMany([
@@ -106,8 +106,8 @@ export const seedDemoData = async (dbPath?: string) => {
     workspaceId: workspace.id,
     mode: "research",
     title: "Initial authority review",
-    modelProvider: "ollama",
-    modelName: "llama3.1"
+    modelProvider: "local",
+    modelName: "auto"
   });
 
   await chatsRepo.appendMessage({

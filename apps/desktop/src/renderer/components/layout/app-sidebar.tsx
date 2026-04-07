@@ -1,5 +1,5 @@
 import { Badge, cn } from "@verdicta/ui";
-import { BookOpenText, FolderKanban, Home, LibraryBig, PencilLine, Settings2 } from "lucide-react";
+import { BookOpenText, Bot, FolderKanban, Home, LibraryBig, PencilLine, Settings2 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 const items = [
@@ -8,6 +8,7 @@ const items = [
   { to: "/library", label: "Library", icon: LibraryBig },
   { to: "/research", label: "Research", icon: BookOpenText },
   { to: "/drafts", label: "Drafts", icon: PencilLine },
+  { to: "/local-ai", label: "Local AI", icon: Bot },
   { to: "/settings", label: "Settings", icon: Settings2 }
 ] as const;
 

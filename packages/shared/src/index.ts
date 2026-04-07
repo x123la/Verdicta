@@ -4,5 +4,6 @@ export * from "./schemas/workspace";
 export * from "./schemas/document";
 export * from "./schemas/chat";
 export * from "./schemas/settings";
+export * from "./schemas/local-ai";
 export * from "./schemas/legal-workflows";
 export * from "./schemas/ipc";

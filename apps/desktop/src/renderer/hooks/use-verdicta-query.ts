@@ -64,6 +64,58 @@ export const useSettings = () =>
     queryFn: () => invokeIpc("settings:get", undefined)
   });
 
+export const useLocalModelCatalog = (query: string, limit = 20) =>
+  useQuery({
+    queryKey: ["local-model-catalog", query, limit],
+    queryFn: () => invokeIpc("local-models:catalog", { query, limit })
+  });
+
+export const useLocalModelDetail = (repoId?: string) =>
+  useQuery({
+    queryKey: ["local-model-detail", repoId],
+    queryFn: () => invokeIpc("local-models:detail", { repoId: repoId! }),
+    enabled: Boolean(repoId)
+  });
+
+export const useInstalledLocalModels = () =>
+  useQuery({
+    queryKey: ["local-models-installed"],
+    queryFn: () => invokeIpc("local-models:installed", undefined)
+  });
+
+export const useLocalRuntimeStatus = () =>
+  useQuery({
+    queryKey: ["local-model-runtime"],
+    queryFn: () => invokeIpc("local-models:runtime", undefined)
+  });
+
+export const useLocalRuntimeInstallStatus = () =>
+  useQuery({
+    queryKey: ["local-model-runtime-install"],
+    queryFn: () => invokeIpc("local-models:runtime-install", undefined),
+    refetchInterval: 1000
+  });
+
+export const useLocalDownloadQueue = () =>
+  useQuery({
+    queryKey: ["local-model-downloads"],
+    queryFn: () => invokeIpc("local-models:downloads", undefined),
+    refetchInterval: 1000
+  });
+
+export const useLocalSystemProfile = () =>
+  useQuery({
+    queryKey: ["local-model-system-profile"],
+    queryFn: () => invokeIpc("local-models:system-profile", undefined)
+  });
+
+export const useLocalTelemetry = () =>
+  useQuery({
+    queryKey: ["local-model-telemetry"],
+    queryFn: () => invokeIpc("local-models:telemetry", undefined),
+    refetchInterval: 1500
+  });
+
 export const useNotes = (workspaceId?: string) =>
   useQuery({
     queryKey: ["notes", workspaceId],
@@ -96,6 +148,56 @@ export const useSaveSettings = () => {
       invokeIpc("settings:update", input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["settings"] });
+    }
+  });
+};
+
+export const useInstallLocalModel = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof invokeIpc<"local-models:install">>[1]) =>
+      invokeIpc("local-models:install", input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["local-models-installed"] });
+      void queryClient.invalidateQueries({ queryKey: ["local-model-runtime"] });
+      void queryClient.invalidateQueries({ queryKey: ["local-model-downloads"] });
+    }
+  });
+};
+
+export const useRemoveLocalModel = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof invokeIpc<"local-models:remove">>[1]) =>
+      invokeIpc("local-models:remove", input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["local-models-installed"] });
+      void queryClient.invalidateQueries({ queryKey: ["local-model-runtime"] });
+      void queryClient.invalidateQueries({ queryKey: ["settings"] });
+    }
+  });
+};
+
+export const useConfigureLocalRuntime = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof invokeIpc<"local-models:configure">>[1]) =>
+      invokeIpc("local-models:configure", input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["local-model-runtime"] });
+    }
+  });
+};
+
+export const useInstallLocalRuntime = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => invokeIpc("local-models:runtime-install-start", undefined),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["local-model-runtime-install"] });
+      void queryClient.invalidateQueries({ queryKey: ["local-model-runtime"] });
+      void queryClient.invalidateQueries({ queryKey: ["local-model-system-profile"] });
+      void queryClient.invalidateQueries({ queryKey: ["local-model-downloads"] });
     }
   });
 };
