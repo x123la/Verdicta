@@ -45,17 +45,20 @@ const RouteLoadingState = () => (
   </div>
 );
 
+import { CommandMenu } from "@/components/ui/command-menu";
+
 const AppShell = () => (
-  <div className="flex h-screen overflow-hidden text-foreground">
+  <div className="flex bg-transparent h-screen overflow-hidden text-foreground">
     <AppSidebar />
-    <main className="flex min-w-0 flex-1 flex-col">
+    <main className="flex min-w-0 flex-1 flex-col relative z-0">
       <TopBar />
-      <div className="min-h-0 flex-1 overflow-auto p-6">
+      <div className="min-h-0 flex-1 overflow-auto px-10 py-8">
         <Suspense fallback={<RouteLoadingState />}>
           <Outlet />
         </Suspense>
       </div>
     </main>
+    <CommandMenu />
   </div>
 );
 

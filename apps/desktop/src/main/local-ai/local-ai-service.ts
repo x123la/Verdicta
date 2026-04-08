@@ -171,7 +171,8 @@ export class LocalAiService {
   getSystemProfile(): LocalSystemProfile {
     const totalRamGb = round1(os.totalmem() / (1024 ** 3)) ?? 0;
     const availableRamGb = round1(os.freemem() / (1024 ** 3)) ?? 0;
-    const cpuModel = os.cpus()[0]?.model ?? "Unknown CPU";
+    const cpus = os.cpus();
+    const cpuModel = cpus[0]?.model ?? "Unknown CPU";
     const gpu = this.detectGpu();
 
     let recommendation = "Recommended starting point: 7B to 8B GGUF models in Q4_K_M.";
@@ -187,13 +188,23 @@ export class LocalAiService {
       os: `${process.platform}`,
       arch: process.arch,
       cpuModel,
-      cpuCores: os.cpus().length,
+      cpuCores: cpus.length,
       totalRamGb,
       availableRamGb,
       gpuName: gpu.name,
       totalVramGb: gpu.totalVramGb,
       supportsGpuRuntime: gpu.supportsGpuRuntime,
-      recommendation
+      recommendation,
+      gpuVendor: gpu.gpuVendor,
+      gpuType: gpu.gpuType,
+      driverStatus: gpu.driverStatus,
+      runtimeRequirementMessage: gpu.runtimeRequirementMessage,
+      runtimeRequirementActionUrl: gpu.runtimeRequirementActionUrl,
+      cpuCoresMetadata: cpus.map((core, i) => ({
+        coreId: i,
+        model: core.model,
+        speedMHz: core.speed
+      }))
     };
   }
 
@@ -374,24 +385,6 @@ export class LocalAiService {
         speedBytesPerSecond: null,
         lastError: null
       });
-      if (!fs.existsSync(targetPath)) {
-        await this.downloadFile(selectedFile.downloadUrl, targetPath, (bytesDownloaded, totalBytes, speedBytesPerSecond) => {
-          this.updateDownloadItem({
-            id: downloadId,
-            kind: "model",
-            label: `${details.name} · ${selectedFile.quantization}`,
-            repoId,
-            fileName: selectedFile.fileName,
-            status: "downloading",
-            progressPercent: totalBytes ? Math.min(100, (bytesDownloaded / totalBytes) * 100) : 0,
-            bytesDownloaded,
-            totalBytes,
-            speedBytesPerSecond,
-            lastError: null
-          });
-        });
-      }
-
       const manifest = this.readManifest();
       const installedModel: InstalledLocalModel = {
         id: modelIdFromParts(repoId, selectedFile.fileName),
@@ -405,20 +398,52 @@ export class LocalAiService {
         sourceDownloadUrl: selectedFile.downloadUrl
       };
 
-      const nextInstalledModels = manifest.installedModels
-        .filter((entry) => entry.id !== installedModel.id)
-        .concat(installedModel);
-      const nextRuntimeConfig = {
-        ...manifest.runtimeConfig,
-        selectedModelId: manifest.runtimeConfig.selectedModelId ?? installedModel.id
-      };
-
-      this.writeManifest({
-        runtimeConfig: nextRuntimeConfig,
-        installedModels: nextInstalledModels,
-        downloadQueue: manifest.downloadQueue
-      });
-      this.completeDownloadItem(downloadId);
+      if (!fs.existsSync(targetPath)) {
+        this.downloadFile(selectedFile.downloadUrl, targetPath, (bytesDownloaded, totalBytes, speedBytesPerSecond) => {
+          this.updateDownloadItem({
+            id: downloadId,
+            kind: "model",
+            label: `${details.name} · ${selectedFile.quantization}`,
+            repoId,
+            fileName: selectedFile.fileName,
+            status: "downloading",
+            progressPercent: totalBytes ? Math.min(100, (bytesDownloaded / totalBytes) * 100) : 0,
+            bytesDownloaded,
+            totalBytes,
+            speedBytesPerSecond,
+            lastError: null
+          });
+        }).then(() => {
+          const m = this.readManifest();
+          const nextInstalledModels = m.installedModels
+            .filter((entry) => entry.id !== installedModel.id)
+            .concat(installedModel);
+          this.writeManifest({
+            runtimeConfig: {
+              ...m.runtimeConfig,
+              selectedModelId: m.runtimeConfig.selectedModelId ?? installedModel.id
+            },
+            installedModels: nextInstalledModels,
+            downloadQueue: m.downloadQueue
+          });
+          this.completeDownloadItem(downloadId);
+        }).catch((err) => {
+          this.failDownloadItem(downloadId, err instanceof Error ? err.message : "Model installation failed.");
+        });
+      } else {
+        const nextInstalledModels = manifest.installedModels
+          .filter((entry) => entry.id !== installedModel.id)
+          .concat(installedModel);
+        this.writeManifest({
+          runtimeConfig: {
+            ...manifest.runtimeConfig,
+            selectedModelId: manifest.runtimeConfig.selectedModelId ?? installedModel.id
+          },
+          installedModels: nextInstalledModels,
+          downloadQueue: manifest.downloadQueue
+        });
+        this.completeDownloadItem(downloadId);
+      }
 
       return installedModel;
     } catch (error) {
@@ -468,7 +493,7 @@ export class LocalAiService {
         message: `Downloading ${asset.name}.`
       };
 
-      await this.downloadFile(asset.browser_download_url, archivePath, (bytesDownloaded, totalBytes, speedBytesPerSecond) => {
+      this.downloadFile(asset.browser_download_url, archivePath, (bytesDownloaded, totalBytes, speedBytesPerSecond) => {
         this.installStatus = {
           ...this.installStatus,
           bytesDownloaded,
@@ -489,55 +514,63 @@ export class LocalAiService {
           speedBytesPerSecond,
           lastError: null
         });
+      }).then(() => {
+        this.installStatus = {
+          ...this.installStatus,
+          message: "Extracting runtime binaries."
+        };
+        this.updateDownloadItem({
+          id: downloadId,
+          kind: "runtime",
+          label: asset.name,
+          repoId: null,
+          fileName: null,
+          status: "extracting",
+          progressPercent: 100,
+          bytesDownloaded: this.installStatus.bytesDownloaded,
+          totalBytes: this.installStatus.totalBytes,
+          speedBytesPerSecond: null,
+          lastError: null
+        });
+
+        const extractDir = path.join(this.runtimeDir, "current");
+        fs.rmSync(extractDir, { recursive: true, force: true });
+        fs.mkdirSync(extractDir, { recursive: true });
+        this.extractArchive(archivePath, extractDir);
+
+        const runtimePath = this.findRuntimeBinary(extractDir);
+        if (!runtimePath) {
+          throw new Error("Verdicta installed the runtime archive, but `llama-server` was not found inside it.");
+        }
+        fs.chmodSync(runtimePath, 0o755);
+
+        const manifest = this.readManifest();
+        this.writeManifest({
+          runtimeConfig: {
+            ...manifest.runtimeConfig,
+            runtimePath
+          },
+          installedModels: manifest.installedModels,
+          downloadQueue: manifest.downloadQueue
+        });
+
+        this.installStatus = {
+          ...this.installStatus,
+          state: "installed",
+          progressPercent: 100,
+          message: "Local runtime installed and ready.",
+          lastError: null
+        };
+        this.completeDownloadItem(downloadId);
+      }).catch((error) => {
+        this.installStatus = {
+          ...this.installStatus,
+          state: "error",
+          message: "Runtime installation failed.",
+          lastError: error instanceof Error ? error.message : "Runtime installation failed."
+        };
+        this.failDownloadItem(downloadId, this.installStatus.lastError);
       });
-
-      this.installStatus = {
-        ...this.installStatus,
-        message: "Extracting runtime binaries."
-      };
-      this.updateDownloadItem({
-        id: downloadId,
-        kind: "runtime",
-        label: asset.name,
-        repoId: null,
-        fileName: null,
-        status: "extracting",
-        progressPercent: 100,
-        bytesDownloaded: this.installStatus.bytesDownloaded,
-        totalBytes: this.installStatus.totalBytes,
-        speedBytesPerSecond: null,
-        lastError: null
-      });
-
-      const extractDir = path.join(this.runtimeDir, "current");
-      fs.rmSync(extractDir, { recursive: true, force: true });
-      fs.mkdirSync(extractDir, { recursive: true });
-      this.extractArchive(archivePath, extractDir);
-
-      const runtimePath = this.findRuntimeBinary(extractDir);
-      if (!runtimePath) {
-        throw new Error("Verdicta installed the runtime archive, but `llama-server` was not found inside it.");
-      }
-      fs.chmodSync(runtimePath, 0o755);
-
-      const manifest = this.readManifest();
-      this.writeManifest({
-        runtimeConfig: {
-          ...manifest.runtimeConfig,
-          runtimePath
-        },
-        installedModels: manifest.installedModels,
-        downloadQueue: manifest.downloadQueue
-      });
-
-      this.installStatus = {
-        ...this.installStatus,
-        state: "installed",
-        progressPercent: 100,
-        message: "Local runtime installed and ready.",
-        lastError: null
-      };
-      this.completeDownloadItem(downloadId);
     } catch (error) {
       this.installStatus = {
         ...this.installStatus,
@@ -545,9 +578,6 @@ export class LocalAiService {
         message: "Runtime installation failed.",
         lastError: error instanceof Error ? error.message : "Runtime installation failed."
       };
-      if (this.installStatus.assetName) {
-        this.failDownloadItem(downloadIdFromParts("runtime", this.installStatus.assetName), this.installStatus.lastError);
-      }
     }
 
     return this.installStatus;
@@ -1097,18 +1127,154 @@ export class LocalAiService {
     if (nvidia) {
       return {
         ...nvidia,
+        gpuVendor: "NVIDIA" as const,
+        gpuType: "Dedicated" as const,
+        driverStatus: "Installed" as const,
+        runtimeRequirementMessage: "CUDA toolkit requires modern NVIDIA drivers, which appear to be installed.",
+        runtimeRequirementActionUrl: "https://developer.nvidia.com/cuda-downloads",
         supportsGpuRuntime: true
       };
     }
 
-    const amdName = readText("/sys/class/drm/card0/device/product_name") ?? readText("/sys/class/drm/card1/device/product_name");
+    if (process.platform === "darwin") {
+      if (process.arch === "arm64") {
+        return {
+          name: "Apple Silicon GPU",
+          gpuVendor: "Apple" as const,
+          gpuType: "Integrated" as const,
+          driverStatus: "Installed" as const,
+          runtimeRequirementMessage: "Apple Metal acceleration requires no additional driver installation.",
+          runtimeRequirementActionUrl: null,
+          totalVramGb: round1(os.totalmem() / (1024 ** 3)),
+          usedVramGb: null,
+          utilPercent: null,
+          temperatureC: null,
+          supportsGpuRuntime: true
+        };
+      }
+      try {
+        const out = execFileSync("system_profiler", ["SPDisplaysDataType"], { encoding: "utf8" });
+        const match = out.match(/Chipset Model:\s*(.*)/);
+        if (match) {
+          const name = match[1].trim();
+          const gpuVendor = name.toLowerCase().includes("amd") || name.toLowerCase().includes("radeon") ? "AMD" : (name.toLowerCase().includes("intel") ? "Intel" : "Unknown");
+          return {
+            name,
+            gpuVendor: gpuVendor as any,
+            gpuType: gpuVendor === "Intel" ? "Integrated" as const : "Dedicated" as const,
+            driverStatus: "Installed" as const,
+            runtimeRequirementMessage: "Mac Intel acceleration relies on available Metal fallback operations.",
+            runtimeRequirementActionUrl: null,
+            totalVramGb: null,
+            usedVramGb: null,
+            utilPercent: null,
+            temperatureC: null,
+            supportsGpuRuntime: true
+          };
+        }
+      } catch {
+        // Fallback to default
+      }
+    }
+
+    if (process.platform === "linux") {
+      for (let i = 0; i < 2; i++) {
+        const basePath = `/sys/class/drm/card${i}/device`;
+        const vendor = readText(`${basePath}/vendor`);
+        if (vendor && vendor.toLowerCase() === "0x1002") {
+          let productName = readText(`${basePath}/product_name`);
+          if (!productName) {
+            try {
+              const lspci = execFileSync("lspci", ["-vmm"], { encoding: "utf8" });
+              const vgaBlock = lspci.split("\n\n").find(block => block.includes("VGA compatible controller") && block.includes("AMD"));
+              if (vgaBlock) {
+                const deviceMatch = vgaBlock.match(/Device:\s*(.*)/);
+                if (deviceMatch) productName = deviceMatch[1].trim();
+              }
+            } catch {}
+          }
+          productName = productName || "AMD Radeon GPU";
+
+          const vramTotalText = readText(`${basePath}/mem_info_vram_total`);
+          const vramUsedText = readText(`${basePath}/mem_info_vram_used`);
+          const busyText = readText(`${basePath}/gpu_busy_percent`);
+
+          let driverStatus = "Unknown" as const;
+          try {
+            driverStatus = "Installed"; // If /sys/class/drm populated, amdgpu driver is usually loaded
+          } catch {}
+
+          return {
+            name: productName,
+            gpuVendor: "AMD" as const,
+            gpuType: "Dedicated" as const,
+            driverStatus,
+            runtimeRequirementMessage: "Vulkan drivers (amdvlk or radv) or ROCm are required for AMD acceleration.",
+            runtimeRequirementActionUrl: "https://rocm.docs.amd.com/projects/install-on-linux/en/latest/",
+            totalVramGb: vramTotalText ? round1(Number(vramTotalText) / (1024 ** 3)) : null,
+            usedVramGb: vramUsedText ? round1(Number(vramUsedText) / (1024 ** 3)) : null,
+            utilPercent: busyText ? Number(busyText) : null,
+            temperatureC: this.readGpuTemperature(),
+            supportsGpuRuntime: true
+          };
+        }
+      }
+    }
+
+    if (process.platform === "win32") {
+      try {
+        const out = execFileSync("wmic", ["path", "win32_VideoController", "get", "name"], { encoding: "utf8" });
+        const lines = out.split("\n").map((l) => l.trim()).filter((l) => l && l.toLowerCase() !== "name");
+        if (lines.length > 0) {
+          const name = lines[0];
+          let gpuVendor = "Unknown" as const;
+          let gpuType = "Unknown" as const;
+          if (name.toLowerCase().includes("amd") || name.toLowerCase().includes("radeon")) {
+            gpuVendor = "AMD";
+            gpuType = "Dedicated";
+          } else if (name.toLowerCase().includes("intel")) {
+            gpuVendor = "Intel";
+            gpuType = "Integrated";
+          } else if (name.toLowerCase().includes("nvidia")) {
+            gpuVendor = "NVIDIA";
+            gpuType = "Dedicated";
+          }
+          let actionUrl: string | null = null;
+          if (gpuVendor === "AMD") actionUrl = "https://www.amd.com/en/support";
+          if (gpuVendor === "NVIDIA") actionUrl = "https://developer.nvidia.com/cuda-downloads";
+          if (gpuVendor === "Intel") actionUrl = "https://www.intel.com/content/www/us/en/download-center/home.html";
+
+          return {
+            name,
+            gpuVendor,
+            gpuType,
+            driverStatus: "Unknown" as const,
+            runtimeRequirementMessage: gpuVendor === "AMD" ? "Vulkan is recommended for AMD GPUs on Windows." : "Make sure your graphics drivers are up to date.",
+            runtimeRequirementActionUrl: actionUrl,
+            totalVramGb: null,
+            usedVramGb: null,
+            utilPercent: null,
+            temperatureC: null,
+            supportsGpuRuntime: true
+          };
+        }
+      } catch {
+        // Fallback to default
+      }
+    }
+
     return {
-      name: amdName,
+      name: null,
+      gpuVendor: "Unknown" as const,
+      gpuType: "Unknown" as const,
+      driverStatus: "Missing" as const,
+      runtimeRequirementMessage: "No compatible GPU detected. Verdicta will fall back to slower CPU execution.",
+      runtimeRequirementActionUrl: null,
       totalVramGb: null,
       usedVramGb: null,
       utilPercent: null,
       temperatureC: this.readGpuTemperature(),
-      supportsGpuRuntime: Boolean(amdName)
+      supportsGpuRuntime: false
     };
   }
 
@@ -1151,14 +1317,28 @@ export class LocalAiService {
   }
 
   private readGpuTemperature() {
-    const zones = ["/sys/class/drm/card0/device/hwmon/hwmon0/temp1_input", "/sys/class/drm/card1/device/hwmon/hwmon1/temp1_input"];
-    for (const zone of zones) {
-      const value = readText(zone);
-      if (value && Number.isFinite(Number(value))) {
-        const numeric = Number(value);
-        return numeric > 1000 ? round1(numeric / 1000) : numeric;
+    try {
+      if (process.platform !== "linux") return null;
+      const drmPath = "/sys/class/drm";
+      if (!fs.existsSync(drmPath)) return null;
+      const cards = fs.readdirSync(drmPath).filter((c) => c.startsWith("card"));
+      for (const card of cards) {
+        const hwmonPath = path.join(drmPath, card, "device", "hwmon");
+        if (fs.existsSync(hwmonPath)) {
+          const hwmons = fs.readdirSync(hwmonPath);
+          for (const hwmon of hwmons) {
+            const tempInputPath = path.join(hwmonPath, hwmon, "temp1_input");
+            if (fs.existsSync(tempInputPath)) {
+              const value = readText(tempInputPath);
+              if (value && Number.isFinite(Number(value))) {
+                const numeric = Number(value);
+                return numeric > 1000 ? round1(numeric / 1000) : numeric;
+              }
+            }
+          }
+        }
       }
-    }
+    } catch {}
     return null;
   }
 

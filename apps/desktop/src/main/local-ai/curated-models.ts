@@ -1,9 +1,11 @@
 import type { LocalModelCatalogEntry } from "@verdicta/shared";
 
-type CuratedModel = Omit<LocalModelCatalogEntry, "downloads" | "likes" | "updatedAt" | "files"> & {
+type CuratedModel = Omit<LocalModelCatalogEntry, "downloads" | "likes" | "updatedAt" | "files" | "modalities" | "languages"> & {
   downloads?: number;
   likes?: number;
   updatedAt?: string | null;
+  modalities?: string[];
+  languages?: string[];
 };
 
 const curated = (entry: CuratedModel): CuratedModel => ({

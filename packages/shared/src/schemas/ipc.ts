@@ -233,6 +233,12 @@ export const ipcSchemas = {
         .default([])
     }),
     output: z.array(z.string())
+  },
+  "system:openExternal": {
+    input: z.object({
+      url: z.string().url()
+    }),
+    output: z.boolean()
   }
 } as const;
 

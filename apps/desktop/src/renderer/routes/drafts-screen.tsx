@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { Badge } from "@verdicta/ui";
 import { useParams } from "react-router-dom";
 import { PanelShell } from "@/components/layout/panel-shell";
@@ -85,14 +86,17 @@ export const DraftsScreen = () => {
                 setIsCreatingNewDraft(false);
                 setActiveDraftId(draft.id);
               }}
-              className={`w-full rounded-2xl border p-4 text-left text-sm ${
+              className={`relative w-full rounded-2xl border p-4 text-left text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 activeDraft?.id === draft.id
-                  ? "border-border bg-accent"
-                  : "border-border/70 bg-background/50"
+                  ? "border-border/60 text-foreground"
+                  : "border-transparent bg-transparent text-muted-foreground hover:bg-accent/40"
               }`}
             >
-              <div className="font-medium">{draft.title}</div>
-              <div className="mt-1 text-muted-foreground">{draft.draftType}</div>
+              {activeDraft?.id === draft.id && (
+                <motion.div layoutId="activeDraftTab" className="absolute inset-0 bg-accent/80 border border-border/60 shadow-sm rounded-2xl z-0" transition={{ type: "spring", bounce: 0.15, duration: 0.5 }} />
+              )}
+              <div className="relative z-10 font-semibold">{draft.title}</div>
+              <div className="relative z-10 mt-1 text-xs opacity-70">{draft.draftType}</div>
             </button>
           ))}
           {!drafts?.length ? (
@@ -104,9 +108,16 @@ export const DraftsScreen = () => {
         </div>
       </PanelShell>
       <PanelShell title="Drafting editor" eyebrow="Tiptap editor" actions={<Badge>Traceable</Badge>}>
-        <div className="space-y-4">
-          <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Draft title" />
-          <TiptapEditor content={content} onChange={setContent} />
+        <div className="space-y-4 flex flex-col h-full">
+          <Input 
+            value={title} 
+            onChange={(event) => setTitle(event.target.value)} 
+            placeholder="Draft title" 
+            className="bg-background/40 border-border/80 shadow-sm text-lg font-semibold py-6"
+          />
+          <div className="flex-1 min-h-[400px] border border-border/60 rounded-[18px] bg-card/60 overflow-hidden shadow-inner">
+            <TiptapEditor content={content} onChange={setContent} />
+          </div>
           <div className="flex justify-end">
             <Button
               onClick={async () => {

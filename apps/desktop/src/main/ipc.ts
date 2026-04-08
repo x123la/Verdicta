@@ -1,4 +1,4 @@
-import { dialog, ipcMain, safeStorage } from "electron";
+import { dialog, ipcMain, safeStorage, shell } from "electron";
 import type { BrowserWindow } from "electron";
 import { eq } from "drizzle-orm";
 import {
@@ -296,6 +296,10 @@ export const registerIpcHandlers = (_window: BrowserWindow) => {
         filters
       });
       return result.canceled ? [] : result.filePaths;
+    },
+    "system:openExternal": async ({ url }) => {
+      await shell.openExternal(url);
+      return true;
     }
   });
 

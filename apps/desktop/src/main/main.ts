@@ -11,8 +11,11 @@ const createMainWindow = async () => {
     height: 980,
     minWidth: 1360,
     minHeight: 840,
-    backgroundColor: "#111315",
-    titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
+    backgroundColor: "#09090b",
+    frame: process.platform === "darwin",
+    titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
+    vibrancy: "under-window",
+    backgroundMaterial: "mica",
     show: false,
     webPreferences: {
       preload: path.join(__dirname, "../preload/index.cjs"),

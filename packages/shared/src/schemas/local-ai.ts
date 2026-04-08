@@ -133,7 +133,19 @@ export const localSystemProfileSchema = z.object({
   gpuName: z.string().nullable(),
   totalVramGb: z.number().nonnegative().nullable(),
   supportsGpuRuntime: z.boolean(),
-  recommendation: z.string()
+  recommendation: z.string(),
+  gpuVendor: z.enum(["NVIDIA", "AMD", "Apple", "Intel", "Unknown"]).default("Unknown"),
+  gpuType: z.enum(["Integrated", "Dedicated", "Unknown"]).default("Unknown"),
+  driverStatus: z.enum(["Installed", "Missing", "Unknown"]).default("Unknown"),
+  runtimeRequirementMessage: z.string().nullable().default(null),
+  runtimeRequirementActionUrl: z.string().url().nullable().default(null),
+  cpuCoresMetadata: z.array(
+    z.object({
+      coreId: z.number().int(),
+      model: z.string(),
+      speedMHz: z.number()
+    })
+  ).default([])
 });
 
 export const localTelemetrySchema = z.object({

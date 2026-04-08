@@ -1,4 +1,5 @@
 import { type ChangeEvent, useDeferredValue, useEffect, useMemo, useState } from "react";
+import * as Tabs from "@radix-ui/react-tabs";
 import { Card } from "@verdicta/ui";
 import {
   useConfigureLocalRuntime,
@@ -11,7 +12,6 @@ import {
   useLocalRuntimeInstallStatus,
   useLocalRuntimeStatus,
   useLocalSystemProfile,
-  useLocalTelemetry,
   useRemoveLocalModel,
   useSaveSettings,
   useSettings
@@ -124,7 +124,6 @@ const LocalAiScreen = () => {
   const { data: runtimeInstallStatus } = useLocalRuntimeInstallStatus();
   const { data: installedModels } = useInstalledLocalModels();
   const { data: systemProfile } = useLocalSystemProfile();
-  const { data: telemetry } = useLocalTelemetry();
   const { data: downloads } = useLocalDownloadQueue();
   const [catalogQuery, setCatalogQuery] = useState("");
   const deferredCatalogQuery = useDeferredValue(catalogQuery.trim());
@@ -242,7 +241,7 @@ const LocalAiScreen = () => {
               <ProviderStatusCard label="Default" value={`${settings?.defaultModelProvider ?? "local"} / ${settings?.defaultModelName ?? "auto"}`} />
             </div>
 
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="grid gap-3">
               <Card className="border border-border/70 bg-background/50 p-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
@@ -279,21 +278,6 @@ const LocalAiScreen = () => {
                       {collection} · {count}
                     </button>
                   ))}
-                </div>
-              </Card>
-
-              <Card className="border border-border/70 bg-background/50 p-5">
-                <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Machine fit</div>
-                <div className="mt-2 text-lg font-semibold">{systemProfile?.recommendation ?? "Profiling local hardware"}</div>
-                <div className="mt-3 text-sm text-muted-foreground">
-                  {systemProfile?.cpuModel ?? "Unknown CPU"} · {systemProfile?.cpuCores ?? "?"} threads
-                </div>
-                <div className="mt-1 text-sm text-muted-foreground">
-                  RAM {systemProfile?.availableRamGb ?? "?"} / {systemProfile?.totalRamGb ?? "?"} GB available
-                </div>
-                <div className="mt-1 text-sm text-muted-foreground">
-                  GPU {systemProfile?.gpuName ?? "Not detected"}
-                  {systemProfile?.totalVramGb ? ` · ${systemProfile.totalVramGb} GB VRAM` : ""}
                 </div>
               </Card>
             </div>
@@ -361,8 +345,20 @@ const LocalAiScreen = () => {
         </div>
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.8fr)_360px]">
-        <Card className="space-y-5 border border-border/70 bg-background/55 p-6">
+      <Tabs.Root defaultValue="catalog" className="flex flex-col gap-6">
+        <Tabs.List className="flex shrink-0 w-full items-center gap-4 border-b border-border/60 pb-2">
+          <Tabs.Trigger value="catalog" className="relative px-2 py-1 flex items-center gap-2 text-[13px] font-semibold text-muted-foreground outline-none transition-colors hover:text-foreground data-[state=active]:text-foreground after:absolute after:-bottom-[9px] after:left-0 after:h-[2px] after:w-full after:bg-primary after:opacity-0 data-[state=active]:after:opacity-100">
+            Model Catalog
+          </Tabs.Trigger>
+          <Tabs.Trigger value="installed" className="relative px-2 py-1 flex items-center gap-2 text-[13px] font-semibold text-muted-foreground outline-none transition-colors hover:text-foreground data-[state=active]:text-foreground after:absolute after:-bottom-[9px] after:left-0 after:h-[2px] after:w-full after:bg-primary after:opacity-0 data-[state=active]:after:opacity-100">
+            Installed Models
+          </Tabs.Trigger>
+          <Tabs.Trigger value="settings" className="relative px-2 py-1 flex items-center gap-2 text-[13px] font-semibold text-muted-foreground outline-none transition-colors hover:text-foreground data-[state=active]:text-foreground after:absolute after:-bottom-[9px] after:left-0 after:h-[2px] after:w-full after:bg-primary after:opacity-0 data-[state=active]:after:opacity-100">
+            Advanced Parameters
+          </Tabs.Trigger>
+        </Tabs.List>
+        <Tabs.Content value="catalog" className="outline-none">
+          <Card className="space-y-5 border border-border/70 bg-background/55 p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Catalog</div>
@@ -644,6 +640,8 @@ const LocalAiScreen = () => {
                       {(selectedCatalogEntry.files.length ? selectedCatalogEntry.files : []).slice(0, 14).map((file: LocalModelFile) => {
                         const installedId = `${selectedCatalogEntry.repoId.replace(/[/:]/g, "__")}::${file.fileName.replace(/[/:]/g, "__")}`;
                         const isInstalled = installedModelIds.has(installedId);
+                        const downloadItem = downloadItems.find(d => d.repoId === selectedCatalogEntry.repoId && d.fileName === file.fileName && d.status !== "completed" && d.status !== "failed");
+                        const isDownloading = Boolean(downloadItem);
                         return (
                           <div
                             key={file.fileName}
@@ -657,17 +655,21 @@ const LocalAiScreen = () => {
                               </div>
                             </div>
                             <Button
-                              className="bg-background"
-                              disabled={installLocalModel.isPending || isInstalled}
+                              size="sm"
+                              disabled={installLocalModel.isPending || isInstalled || isDownloading}
                               onClick={async () => {
-                                const installed = await installLocalModel.mutateAsync({
-                                  repoId: selectedCatalogEntry.repoId,
-                                  fileName: file.fileName
-                                });
-                                setTestMessage(`Installed ${installed.displayName}.`);
+                                try {
+                                  setTestMessage("Starting download...");
+                                  await installLocalModel.mutateAsync({
+                                    repoId: selectedCatalogEntry.repoId,
+                                    fileName: file.fileName
+                                  });
+                                } catch (error) {
+                                  setTestMessage(error instanceof Error ? error.message : "Install failed");
+                                }
                               }}
                             >
-                              {isInstalled ? "Installed" : installLocalModel.isPending ? "Installing..." : "Install build"}
+                              {isInstalled ? "Installed" : isDownloading ? `Downloading ${Math.round(downloadItem.progressPercent)}%` : "Download"}
                             </Button>
                           </div>
                         );
@@ -687,10 +689,11 @@ const LocalAiScreen = () => {
               )}
             </div>
           </div>
-        </Card>
+          </Card>
+        </Tabs.Content>
 
-        <div className="space-y-6">
-          <Card className="space-y-4 border border-border/70 bg-background/55 p-5">
+        <Tabs.Content value="installed" className="outline-none">
+          <Card className="space-y-4 border border-border/70 bg-background/55 p-6 max-w-4xl mx-auto">
             <div>
               <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Installed models</div>
               <div className="mt-2 text-xl font-semibold">Ready in Verdicta</div>
@@ -737,41 +740,10 @@ const LocalAiScreen = () => {
               ) : null}
             </div>
           </Card>
+        </Tabs.Content>
 
-          <Card className="space-y-4 border border-border/70 bg-background/55 p-5">
-            <div>
-              <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Live telemetry</div>
-              <div className="mt-2 text-xl font-semibold">Current runtime stats</div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-              {[
-                ["Throughput", telemetry?.tokensPerSecond != null ? `${telemetry.tokensPerSecond.toFixed(1)} tok/s` : "Unavailable"],
-                ["RAM", telemetry?.ramUsedGb != null ? `${telemetry.ramUsedGb} GB` : "Unavailable"],
-                ["CPU", telemetry?.cpuPercent != null ? `${telemetry.cpuPercent}%` : "Unavailable"],
-                ["GPU", telemetry?.gpuUtilPercent != null ? `${telemetry.gpuUtilPercent}%` : "Unavailable"],
-                ["VRAM", telemetry?.vramUsedGb != null ? `${telemetry.vramUsedGb} GB` : "Unavailable"],
-                ["Temps", `${telemetry?.cpuTemperatureC ?? "?"}°C CPU · ${telemetry?.gpuTemperatureC ?? "?"}°C GPU`]
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-2xl border border-border/70 bg-card/60 p-4">
-                  <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{label}</div>
-                  <div className="mt-2 text-sm font-medium text-foreground">{value}</div>
-                </div>
-              ))}
-            </div>
-            <Button
-              className="bg-background"
-              onClick={async () => {
-                const result = await invokeIpc("providers:test", { providerName: "local" });
-                setTestMessage(result.message);
-              }}
-            >
-              Test runtime
-            </Button>
-          </Card>
-        </div>
-      </div>
-
-      <Card className="space-y-5 border border-border/70 bg-background/55 p-6">
+        <Tabs.Content value="settings" className="outline-none">
+          <Card className="space-y-5 border border-border/70 bg-background/55 p-6">
         <div>
           <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Advanced runtime</div>
           <div className="mt-2 text-2xl font-semibold">Backend launch and inference controls</div>
@@ -906,7 +878,9 @@ const LocalAiScreen = () => {
             </div>
           </div>
         ) : null}
-      </Card>
+          </Card>
+        </Tabs.Content>
+      </Tabs.Root>
     </div>
   );
 };

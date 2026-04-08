@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@verdicta/ui";
 import { useParams } from "react-router-dom";
 import { PanelShell } from "@/components/layout/panel-shell";
@@ -110,7 +111,7 @@ export const ResearchScreen = () => {
       <PanelShell title="Grounded legal chat" eyebrow="Research workspace" actions={<Badge>{activeChatMode}</Badge>} className="flex flex-col">
         <div className="space-y-4">
           {chats?.length ? (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 p-1 bg-background/40 border border-border/40 rounded-full w-max">
               <button
                 type="button"
                 onClick={() => {
@@ -118,11 +119,12 @@ export const ResearchScreen = () => {
                   setActiveChatId(undefined);
                   setMessage("");
                 }}
-                className={`rounded-full px-3 py-1.5 text-xs ${
-                  !activeChatId ? "bg-accent text-foreground" : "bg-background/50 text-muted-foreground"
+                className={`relative rounded-full px-4 py-1.5 text-xs font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors ${
+                  !activeChatId ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                New session
+                {!activeChatId && <motion.div layoutId="researchSessionTab" className="absolute inset-0 bg-accent/80 border border-border/60 shadow-sm rounded-full z-0" transition={{ type: "spring", bounce: 0.2, duration: 0.6 }} />}
+                <span className="relative z-10">New Session</span>
               </button>
               {chats.map((chat) => (
                 <button
@@ -132,11 +134,12 @@ export const ResearchScreen = () => {
                     setResponse(null);
                     setActiveChatId(chat.id);
                   }}
-                  className={`rounded-full px-3 py-1.5 text-xs ${
-                    activeChatId === chat.id ? "bg-accent text-foreground" : "bg-background/50 text-muted-foreground"
+                  className={`relative rounded-full px-4 py-1.5 text-xs font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors ${
+                    activeChatId === chat.id ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {chat.title}
+                  {activeChatId === chat.id && <motion.div layoutId="researchSessionTab" className="absolute inset-0 bg-accent/80 border border-border/60 shadow-sm rounded-full z-0" transition={{ type: "spring", bounce: 0.2, duration: 0.6 }} />}
+                  <span className="relative z-10">{chat.title}</span>
                 </button>
               ))}
             </div>
@@ -147,31 +150,45 @@ export const ResearchScreen = () => {
                 key={mode}
                 type="button"
                 onClick={() => setChatMode(mode)}
-                className={`rounded-full px-3 py-1.5 text-xs uppercase tracking-[0.18em] ${
-                  activeChatMode === mode ? "bg-accent text-foreground" : "text-muted-foreground"
+                className={`rounded-xl px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.16em] transition-all border ${
+                  activeChatMode === mode 
+                    ? "bg-foreground text-background border-foreground shadow-sm" 
+                    : "bg-background/40 text-muted-foreground border-border/60 hover:bg-accent/40 hover:text-foreground hover:border-border/80"
                 }`}
               >
-                {mode}
+                {mode.replace("-", " ")}
               </button>
             ))}
           </div>
-          <Input
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            placeholder={
-              activeChat
-                ? `Continue ${activeChat.mode} analysis in "${activeChat.title}"`
-                : "Ask a grounded question about the selected workspace sources"
-            }
-          />
-          <div className="flex justify-end">
-            <Button onClick={runGroundedChat} disabled={busy || !workspaceId || !message.trim()}>
-              {busy ? "Generating..." : "Run grounded analysis"}
-            </Button>
+          <div className="relative">
+            <Input
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              className="pr-24 bg-card/40 border-border/80 focus-visible:ring-primary shadow-sm"
+              placeholder={
+                activeChat
+                  ? `Continue ${activeChat.mode.replace("-", " ")} analysis...`
+                  : "Ask a grounded question about the selected workspace sources..."
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  runGroundedChat();
+                }
+              }}
+            />
+            <div className="absolute right-1 top-1 bottom-1 flex items-center">
+              <Button size="sm" onClick={runGroundedChat} disabled={busy || !workspaceId || !message.trim()} className="h-full rounded-[6px] px-4 font-semibold shadow-none">
+                {busy ? "Running..." : "Run"}
+              </Button>
+            </div>
           </div>
-          <ChatThread messages={messages} />
+          <div className="flex-1 mt-4">
+            <ChatThread messages={messages} />
+          </div>
           {!messages.length ? (
-            <div className="rounded-2xl border border-border/70 bg-background/55 p-5 text-sm text-muted-foreground">
+            <div className="rounded-[20px] border border-border/80 bg-background/50 p-6 text-sm text-muted-foreground backdrop-blur-md shadow-sm">
+              <div className="font-semibold text-foreground mb-1">Grounded analysis</div>
               Use the grounded chat to produce research answers, case briefs, comparisons, memo outlines, study materials, and support reviews with visible provenance.
             </div>
           ) : null}
